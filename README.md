@@ -16,7 +16,7 @@ Run the following command on your OpenWRT router via SSH to install the service 
 
 ```bash
 opkg update && opkg install wget
-cd /tmp && wget https://github.com/emonbhuiyan/BDIX-OpenWRT/raw/main/install.sh && chmod +x install.sh && ./install.sh
+cd /tmp && wget https://github.com/detekfitfounder/socks5-openrouter/raw/main/install.sh && chmod +x install.sh && ./install.sh
 ```
 
 This script will:
