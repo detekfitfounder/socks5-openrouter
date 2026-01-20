@@ -1,29 +1,32 @@
 #!/bin/sh /etc/rc.common
 # Copyright (C) 2007 OpenWrt.org
 
-START=90
-INTERFACE=br-lan
-PORT=1337
+START=99
+USE_PROCD=1
 
-# check if configuration exists
-[ -e "/etc/bdix.conf" ] || exit 0
+PROG=/usr/sbin/redsocks
+CONF=/etc/bdix.conf
+PIDFILE=/var/run/bdix.pid
+
+# Domain/IP Whitelist (Traffic to these will NOT go through proxy)
+# You can also create /etc/bdix.whitelist containing domains/IPs (one per line)
+DEFAULT_WHITELIST="
+facebook.com
+messenger.com
+wise.com
+priyo.com
+upwork.com
+172.16.50.7
+aibl.com.bd
+"
 
 iptable_start() {
-    /bin/echo -n "running bdix iptables ..."
+    echo -n "Applying bdix iptables rules..."
 
-    # Run iptable commands
+    # Create new chain
     iptables -t nat -N BDIX
-
-    # Direct connections for specific domains
-    iptables -t nat -A BDIX -d facebook.com -j RETURN
-    iptables -t nat -A BDIX -d messenger.com -j RETURN
-    iptables -t nat -A BDIX -d wise.com -j RETURN
-    iptables -t nat -A BDIX -d priyo.com -j RETURN
-    iptables -t nat -A BDIX -d upwork.com -j RETURN
-    iptables -t nat -A BDIX -d 172.16.50.7 -j RETURN
-    iptables -t nat -A BDIX -d aibl.com.bd -j RETURN
-
-
+    
+    # 1. Local/Private IP bypass (Standard RFC1918 + others)
     iptables -t nat -A BDIX -d 0.0.0.0/8 -j RETURN
     iptables -t nat -A BDIX -d 10.0.0.0/8 -j RETURN
     iptables -t nat -A BDIX -d 127.0.0.0/8 -j RETURN
@@ -33,61 +36,84 @@ iptable_start() {
     iptables -t nat -A BDIX -d 224.0.0.0/4 -j RETURN
     iptables -t nat -A BDIX -d 240.0.0.0/4 -j RETURN
 
-    iptables -t nat -A BDIX -p tcp -j REDIRECT --to-ports ${PORT}
+    # 2. Process Custom Whitelist
+    # Merge default and file-based whitelist
+    whitelist_items="$DEFAULT_WHITELIST"
+    if [ -f "/etc/bdix.whitelist" ]; then
+        file_items=$(grep -v '^#' /etc/bdix.whitelist)
+        whitelist_items="$whitelist_items $file_items"
+    fi
 
-    iptables -t nat -A PREROUTING -i ${INTERFACE} -p tcp -j BDIX
+    for item in $whitelist_items; do
+        [ -n "$item" ] && iptables -t nat -A BDIX -d "$item" -j RETURN
+    done
 
-    iptables -A INPUT -i br-lan -p tcp --dport ${PORT} -j ACCEPT
+    # 3. Redirect remaining TCP traffic to redsocks
+    # Get port from config or default to 1337
+    PORT=$(awk -F'[ =;]+' '/local_port/ {print $2}' $CONF)
+    [ -z "$PORT" ] && PORT=1337
 
-    /bin/echo " done"
+    iptables -t nat -A BDIX -p tcp -j REDIRECT --to-ports "$PORT"
+
+    # 4. Apply to PREROUTING (LAN clients)
+    # Adjust INTERFACE if needed, usually br-lan for LAN clients
+    iptables -t nat -A PREROUTING -i br-lan -p tcp -j BDIX
+    
+    # Allow input to the local port (if needed for local router traffic)
+    iptables -A INPUT -i br-lan -p tcp --dport "$PORT" -j ACCEPT
+
+    echo " done"
 }
 
 iptable_stop() {
-    /bin/echo -n "cleaning bdix iptables ..."
+    echo -n "Removing bdix iptables rules..."
+    
+    iptables -t nat -D PREROUTING -i br-lan -p tcp -j BDIX 2>/dev/null
+    iptables -t nat -F BDIX 2>/dev/null
+    iptables -t nat -X BDIX 2>/dev/null
+    
+    # We don't flush all of INPUT/FORWARD as that might kill other services
+    # just clean specific rules if we could identify them, 
+    # but strictly speaking the INPUT rule above is safe to leave or we should track it.
+    # For now, we mainly accept the loose INPUT rule might remain until reboot or specific deletion.
+    # To be cleaner:
+    PORT=$(awk -F'[ =;]+' '/local_port/ {print $2}' $CONF)
+    [ -z "$PORT" ] && PORT=1337
+    iptables -D INPUT -i br-lan -p tcp --dport "$PORT" -j ACCEPT 2>/dev/null
 
-    # Run iptable commands
-    iptables -t nat -F BDIX
-    iptables -t nat -F PREROUTING
-    iptables -t nat -F POSTROUTING
-    iptables -F INPUT
-    iptables -F FORWARD
-    iptables -t nat -X BDIX
-
-    /bin/echo " done"
+    echo " done"
 }
 
-start() {
-    if [ -e "/var/run/bdix.pid" ]; then
-        echo "bdix is already running"
-        exit 0
-    fi
+start_service() {
+    [ -f "$CONF" ] || return 1
+    
+    # Ensure no stale pid/process
+    # procd handles the process, but we clean iptables first to be sure
+    iptable_stop
 
-    /bin/echo -n "running bdix ..."
+    procd_open_instance
+    procd_set_param command "$PROG" -c "$CONF"
+    
+    # Auto-respawn process if it dies
+    # respawn_threshold: restarts if it dies after this many seconds
+    # respawn_timeout: wait this long before restarting
+    # respawn_retry: how many times to retry? (0 = infinite usually)
+    procd_set_param respawn 3600 5 0
+    
+    procd_set_param stdout 1
+    procd_set_param stderr 1
+    # Close instance
+    procd_close_instance
 
-    # startup the safety-wrapper for the daemon
-    /usr/sbin/redsocks -c /etc/bdix.conf -p /var/run/bdix.pid
-
-    /bin/echo " done"
+    # Apply iptables rules
     iptable_start
 }
 
-
-stop() {
-    if [ ! -e "/var/run/bdix.pid" ]; then
-        echo "bdix is not running"
-        exit 0
-    fi
-
-    /bin/echo -n "stopping bdix ..."
-
-    # kill the process
-    /bin/kill $(cat /var/run/bdix.pid)
-    rm /var/run/bdix.pid
-
-    echo " done"
+stop_service() {
     iptable_stop
+}
 
-    /bin/echo -n "restarting firewall ..."
-    /etc/init.d/firewall restart &> /dev/null
-    /bin/echo " done"
+reload_service() {
+    stop
+    start
 }

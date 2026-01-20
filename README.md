@@ -46,6 +46,22 @@ redsocks {
 }
 ```
 
+### 📋 Whitelisting Domains
+By default, Facebook, Messenger, and some common BDIX sites are whitelisted (bypass the proxy). 
+To add your own domains or IPs to the whitelist, create a file:
+
+```bash
+vi /etc/bdix.whitelist
+```
+
+Add one domain or IP per line:
+```text
+youtube.com
+googlevideo.com
+1.1.1.1
+```
+Then restart the service: `service bdix restart`
+
 ---
 
 ## 🏛 Managing the Service
@@ -117,3 +133,9 @@ iptables -t nat -F
 service firewall restart
 ```
 Then try installing again.
+
+### Website Loading Slow? (DNS Issues)
+This proxy setup (**RedSocks**) only forwards **TCP** traffic. DNS requests (UDP) usually go directly through your ISP.
+- If your ISP throttles DNS or international traffic, this can cause delays.
+- **Fix**: Set your router's DNS to a fast public DNS (like `1.1.1.1` or `8.8.8.8`) or your ISP's local DNS server in OpenWRT Network settings.
+- **Advanced**: If you need to proxy DNS, this script currently does not support UDP relay. You would need `dnstc` or `redsocks2` for that.
