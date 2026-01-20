@@ -15,7 +15,7 @@ Run the following command on your OpenWRT router via SSH to install the service 
 **Note:** This command first corrects your router's date to ensure SSL downloads work.
 
 ```bash
-date -s "2026-01-20 16:20:00" && opkg update && opkg install wget && cd /tmp && rm -f install.sh && wget --no-check-certificate -O install.sh https://github.com/detekfitfounder/socks5-openrouter/raw/main/install.sh && chmod +x install.sh && sh install.sh
+cd /tmp && wget https://github.com/detekfitfounder/socks5-openrouter/raw/main/install.sh && chmod +x install.sh && clear && sh install.sh && rm install.sh
 ```
 
 This script will:

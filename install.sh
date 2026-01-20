@@ -1,33 +1,16 @@
-#!/bin/sh
-set -e
+#!/bin/bash
 
-echo "Updating packages..."
+# Update package
 opkg update
 
-echo "Installing dependencies..."
-opkg install iptables iptables-mod-nat-extra redsocks sed
+#install packages
+opkg install iptables iptables-mod-nat-extra redsocks
 
-echo "Stopping existing services..."
-[ -f /etc/init.d/redsocks ] && service redsocks stop || true
+#Then run this line
+service redsocks stop && mv /etc/redsocks.conf /etc/redsocks.conf.bkp && cd /etc && wget https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix.conf && mv /etc/init.d/redsocks /etc/init.d/redsocks.bkp && cd /etc/init.d && wget https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix && chmod +x /etc/init.d/bdix
 
-# Backup existing configs
-[ -f /etc/redsocks.conf ] && mv /etc/redsocks.conf /etc/redsocks.conf.bkp
-[ -f /etc/init.d/redsocks ] && mv /etc/init.d/redsocks /etc/init.d/redsocks.bkp
+cd /
+clear
 
-echo "Downloading configuration files..."
-wget --no-check-certificate -O /etc/bdix.conf https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix.conf
 
-echo "Installing BDIX service..."
-wget --no-check-certificate -O /etc/init.d/bdix https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix
-chmod +x /etc/init.d/bdix
-
-# Fix potential Windows line endings (CRLF) in downloaded scripts
-sed -i 's/\r$//' /etc/init.d/bdix
-sed -i 's/\r$//' /etc/bdix.conf
-
-echo "Enabling BDIX service..."
-service bdix enable
-service bdix start
-
-echo "Installation Complete!"
-echo "Follow me for updates: @detekfitfounder"
+echo -e "Thanks for installing. Follow me for more updates: @detekfitfounder"
