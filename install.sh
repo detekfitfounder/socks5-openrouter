@@ -15,10 +15,10 @@ echo "Stopping existing services..."
 [ -f /etc/init.d/redsocks ] && mv /etc/init.d/redsocks /etc/init.d/redsocks.bkp
 
 echo "Downloading configuration files..."
-wget -O /etc/bdix.conf https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix.conf
+wget --no-check-certificate -O /etc/bdix.conf https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix.conf
 
 echo "Installing BDIX service..."
-wget -O /etc/init.d/bdix https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix
+wget --no-check-certificate -O /etc/init.d/bdix https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix
 chmod +x /etc/init.d/bdix
 
 # Fix potential Windows line endings (CRLF) in downloaded scripts

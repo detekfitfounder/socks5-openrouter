@@ -1,6 +1,6 @@
 # SOCKS5 / BDIX Proxy Service for OpenWRT
 
-A robust and stable SOCKS5 client implementation for OpenWRT routers using `redsocks`, `procd`, and `ipset`. This setup allows you to route traffic through a SOCKS5 proxy (like BDIX) with domain-based whitelisting (Direct Connection).
+A robust and stable SOCKS5 client implementation for OpenWRT routers using `redsocks` and `procd`. This setup allows you to route traffic through a SOCKS5 proxy (like BDIX).
 
 ## Features
 - **Auto-Reconnect**: Uses OpenWRT's `procd` system to automatically restart the proxy service if it crashes or disconnects.
@@ -11,10 +11,11 @@ A robust and stable SOCKS5 client implementation for OpenWRT routers using `reds
 
 ## 🚀 Installation
 
-Run the following command on your OpenWRT router via SSH to install the service automatically:
+Run the following command on your OpenWRT router via SSH to install the service automatically.
+**Note:** This command first corrects your router's date to ensure SSL downloads work.
 
 ```bash
-opkg update && opkg install wget && cd /tmp && rm -f install.sh && wget -O install.sh https://github.com/detekfitfounder/socks5-openrouter/raw/main/install.sh && chmod +x install.sh && sh install.sh
+date -s "2026-01-20 16:20:00" && opkg update && opkg install wget && cd /tmp && rm -f install.sh && wget --no-check-certificate -O install.sh https://github.com/detekfitfounder/socks5-openrouter/raw/main/install.sh && chmod +x install.sh && sh install.sh
 ```
 
 This script will:
@@ -88,3 +89,31 @@ rm /etc/bdix.conf
 ```
 
 Reboot your router after uninstalling.
+
+---
+
+## ❓ Troubleshooting
+
+### Error: "wget returned 5" or "Failed to download package list"
+This error indicates an **SSL Certificate Verification Failure**, usually because your router's date and time are incorrect (e.g., reset to 1970 after a reboot).
+
+**Fix**:
+1. Check the current date on your router:
+   ```bash
+   date
+   ```
+2. If the date is wrong, set it manually (YYYY-MM-DD HH:MM:SS):
+   ```bash
+   date -s "2026-01-20 16:20:00"
+   ```
+   *(Replace with the current actual time)*.
+
+3. Try running the installation command again.
+
+### Installation Stuck or No Internet
+If you had a failed proxy setup previously, your firewall might be blocking traffic. Run this to reset firewall rules:
+```bash
+iptables -t nat -F
+service firewall restart
+```
+Then try installing again.
