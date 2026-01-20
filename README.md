@@ -4,7 +4,6 @@ A robust and stable SOCKS5 client implementation for OpenWRT routers using `reds
 
 ## Features
 - **Auto-Reconnect**: Uses OpenWRT's `procd` system to automatically restart the proxy service if it crashes or disconnects.
-- **Domain Whitelisting**: Easily specify domains (like `facebook.com`) to bypass the proxy using a simple text file.
 - **Stability**: Prevents internet lockouts and ensures the proxy service runs reliably.
 - **Safety**: proxy is restricted to LAN interface `br-lan` to prevent WAN exposure.
 
@@ -19,15 +18,14 @@ opkg update && opkg install wget && cd /tmp && rm -f install.sh && wget -O insta
 ```
 
 This script will:
-1. Install required packages (`redsocks`, `iptables`, `ipset`, `iptables-mod-nat-extra`).
-2. Configure `dnsmasq` for domain whitelisting.
-3. Install the `bdix` service.
+1. Install required packages (`redsocks`, `iptables`, `iptables-mod-nat-extra`).
+2. Install the `bdix` service.
 
 ---
 
 ## ⚙️ Configuration
 
-### 1. Configure SOCKS5 Proxy
+### Configure SOCKS5 Proxy
 To set your proxy details (IP, Port, Username, Password), edit the config file:
 
 ```bash
@@ -46,27 +44,6 @@ redsocks {
     password = "YOUR_PASSWORD";
 }
 ```
-
-### 2. Configure Domain Whitelist (Direct Connection)
-Domains listed in the whitelist will **bypass** the proxy and use your direct internet connection.
-
-1. Edit the whitelist file:
-   ```bash
-   vi /etc/bdix_whitelist.txt
-   ```
-2. Add domains one per line. Example:
-   ```text
-   facebook.com
-   messenger.com
-   whatismyip.com
-   ```
-3. **Apply Changes**:
-   Whenever you edit the whitelist, you must restart `dnsmasq` and `bdix` to update the IP sets:
-   
-   ```bash
-   service dnsmasq restart
-   service bdix restart
-   ```
 
 ---
 
@@ -108,9 +85,6 @@ service bdix stop
 service bdix disable
 rm /etc/init.d/bdix
 rm /etc/bdix.conf
-rm /etc/bdix_whitelist.txt
-rm /etc/bdix_dnsmasq.conf
-# You may also want to remove the include line from /etc/dnsmasq.conf manually
 ```
 
 Reboot your router after uninstalling.

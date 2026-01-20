@@ -8,17 +8,12 @@ STOP=01
 
 PROG=/usr/sbin/redsocks
 CONFIG=/etc/bdix.conf
-IPSET_NAME=bdix_whitelist
 PORT=1337
 INTERFACE=br-lan
 
 start_service() {
     # Check config
     [ -e "$CONFIG" ] || return 1
-
-    # Create IPSET if it doesn't exist
-    # usage: ipset create setname hash:ip
-    ipset -L $IPSET_NAME >/dev/null 2>&1 || ipset -N $IPSET_NAME hash:ip
 
     # Start Redsocks via PROCD
     procd_open_instance
@@ -47,10 +42,7 @@ iptables_init() {
     iptables -t nat -N BDIX 2>/dev/null
     iptables -t nat -F BDIX
 
-    # 1. Whitelist from IPSET (Populated by dnsmasq)
-    iptables -t nat -A BDIX -m set --match-set $IPSET_NAME dst -j RETURN
-
-    # 2. Local/Private ranges bypass
+    # 1. Local/Private ranges bypass
     iptables -t nat -A BDIX -d 0.0.0.0/8 -j RETURN
     iptables -t nat -A BDIX -d 10.0.0.0/8 -j RETURN
     iptables -t nat -A BDIX -d 127.0.0.0/8 -j RETURN

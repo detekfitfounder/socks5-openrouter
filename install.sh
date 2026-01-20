@@ -1,40 +1,33 @@
 #!/bin/sh
+set -e
 
-# Update package
+echo "Updating packages..."
 opkg update
 
-#install packages
-opkg install iptables iptables-mod-nat-extra redsocks ipset
+echo "Installing dependencies..."
+opkg install iptables iptables-mod-nat-extra redsocks sed
 
-#Then run this line
-service redsocks stop
-mv /etc/redsocks.conf /etc/redsocks.conf.bkp
-cd /etc
-wget https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix.conf
-wget https://github.com/detekfitfounder/socks5-openrouter/raw/main/whitelist.txt -O /etc/bdix_whitelist.txt
+echo "Stopping existing services..."
+[ -f /etc/init.d/redsocks ] && service redsocks stop || true
 
-# Generate dnsmasq config for whitelist
-echo "# BDIX Whitelist" > /etc/bdix_dnsmasq.conf
-while read p; do
-  echo "ipset=/$p/bdix_whitelist" >> /etc/bdix_dnsmasq.conf
-done < /etc/bdix_whitelist.txt
+# Backup existing configs
+[ -f /etc/redsocks.conf ] && mv /etc/redsocks.conf /etc/redsocks.conf.bkp
+[ -f /etc/init.d/redsocks ] && mv /etc/init.d/redsocks /etc/init.d/redsocks.bkp
 
-# Create ipset if not exists (so dnsmasq doesn't complain on restart before bdix starts)
-ipset -N bdix_whitelist hash:ip 2>/dev/null
+echo "Downloading configuration files..."
+wget -O /etc/bdix.conf https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix.conf
 
-# Add to dnsmasq.conf if not present
-if ! grep -q "conf-file=/etc/bdix_dnsmasq.conf" /etc/dnsmasq.conf; then
-    echo "conf-file=/etc/bdix_dnsmasq.conf" >> /etc/dnsmasq.conf
-fi
-/etc/init.d/dnsmasq restart
-
-mv /etc/init.d/redsocks /etc/init.d/redsocks.bkp
-cd /etc/init.d
-wget https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix
+echo "Installing BDIX service..."
+wget -O /etc/init.d/bdix https://github.com/detekfitfounder/socks5-openrouter/raw/main/bdix
 chmod +x /etc/init.d/bdix
 
-cd /
-clear
+# Fix potential Windows line endings (CRLF) in downloaded scripts
+sed -i 's/\r$//' /etc/init.d/bdix
+sed -i 's/\r$//' /etc/bdix.conf
 
+echo "Enabling BDIX service..."
+service bdix enable
+service bdix start
 
-echo -e "Thanks for installing. Follow me for more updates: @detekfitfounder"
+echo "Installation Complete!"
+echo "Follow me for updates: @detekfitfounder"
