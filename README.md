@@ -15,7 +15,7 @@ A robust and stable SOCKS5 client implementation for OpenWRT routers using `reds
 Run the following command on your OpenWRT router via SSH to install the service automatically:
 
 ```bash
-opkg update && opkg install wget && cd /tmp && rm -f install.sh && wget -O install.sh https://github.com/detekfitfounder/socks5-openrouter/raw/main/install.sh && chmod +x install.sh && ./install.sh
+opkg update && opkg install wget && cd /tmp && rm -f install.sh && wget -O install.sh https://github.com/detekfitfounder/socks5-openrouter/raw/main/install.sh && chmod +x install.sh && sh install.sh
 ```
 
 This script will:

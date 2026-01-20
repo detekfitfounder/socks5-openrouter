@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Update package
 opkg update
